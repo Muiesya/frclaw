@@ -1,7 +1,7 @@
 # FrClaw
 
 <p align="center">
-  <img src="web/public/icons/logo-1024.png" alt="FrClaw logo" width="96" />
+  <img src="docs/screenshots/frclaw-icon.jpg" alt="FrClaw logo" width="96" />
 </p>
 
 <p align="center">
