@@ -6,6 +6,7 @@ import type { Variables } from '../web-context.js';
 import {
   createResearchPlan,
   normalizeResearchSymbol,
+  RESEARCH_SCENARIOS,
 } from '../research-model.js';
 import {
   cancelResearchRunDurable,
@@ -27,6 +28,7 @@ const CreateResearchSchema = z.object({
   symbol: z.string().trim().min(1).max(50),
   market: z.string().trim().max(10).optional(),
   question: z.string().trim().min(1).max(2000),
+  scenario: z.enum(RESEARCH_SCENARIOS).default('full'),
 });
 
 function userId(c: { get: (key: 'user') => unknown }): string {
@@ -43,7 +45,10 @@ researchRoutes.post('/runs', authMiddleware, async (c) => {
   );
   if (!parsed.success) {
     return c.json(
-      { error: '请输入证券代码和研究问题。', details: parsed.error.format() },
+      {
+        error: '请检查证券代码、研究问题和研究类型。',
+        details: parsed.error.format(),
+      },
       400,
     );
   }
@@ -69,7 +74,7 @@ researchRoutes.post('/runs', authMiddleware, async (c) => {
     userId: userId(c),
     symbol,
     question: parsed.data.question,
-    plan: createResearchPlan(),
+    plan: createResearchPlan(undefined, parsed.data.scenario),
     idempotencyKey: requestIdempotencyKey,
   });
   enqueueResearchRun(run.id);
@@ -111,7 +116,7 @@ researchRoutes.post('/runs/:id/review', authMiddleware, (c) => {
     userId: userId(c),
     symbol: source.symbol,
     question: source.question,
-    plan: createResearchPlan(),
+    plan: createResearchPlan(undefined, source.plan.scenario),
     idempotencyKey: c.req.header('Idempotency-Key'),
   });
   enqueueResearchRun(run.id);
