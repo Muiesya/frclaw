@@ -135,6 +135,13 @@ const statusLabel: Record<RunStatus, string> = {
   cancelled: '已取消',
 };
 
+const researchScenarios = [
+  { value: 'full', label: '全面研究' },
+  { value: 'quote', label: '仅查询行情' },
+  { value: 'earnings', label: '财报分析' },
+  { value: 'events', label: '事件跟踪' },
+];
+
 function statusVariant(
   status: RunStatus,
 ): 'success' | 'warning' | 'error' | 'info' | 'neutral' {
@@ -201,6 +208,7 @@ export function ResearchPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const detailRequestRef = useRef(0);
   const [symbol, setSymbol] = useState('0700.HK');
+  const [scenario, setScenario] = useState('full');
   const [question, setQuestion] = useState(
     '当前公开市场研究中，主要多空因素和数据缺口是什么？',
   );
@@ -296,7 +304,7 @@ export function ResearchPage() {
     try {
       const result = await api.post<{ run: ResearchRunDetail }>(
         '/api/research/runs',
-        { symbol, question },
+        { symbol, question, scenario },
         undefined,
         { 'Idempotency-Key': crypto.randomUUID() },
       );
@@ -392,6 +400,21 @@ export function ResearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
+                    <Label htmlFor="research-scenario">研究类型</Label>
+                    <select
+                      id="research-scenario"
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring"
+                      value={scenario}
+                      onChange={(event) => setScenario(event.target.value)}
+                    >
+                      {researchScenarios.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="research-question">研究问题</Label>
                     <Textarea
                       id="research-question"
@@ -402,8 +425,8 @@ export function ResearchPage() {
                     />
                   </div>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    第一阶段仅支持港股。系统会先规划行情、财务、估值和新闻能力。未配置的
-                    Provider 会显示为研究缺口，不会用零值填充。
+                    目前支持港股。系统按所选类型规划步骤，未配置的 Provider
+                    会显示为研究缺口。
                   </p>
                   <Button
                     type="submit"

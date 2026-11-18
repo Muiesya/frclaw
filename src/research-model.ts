@@ -7,6 +7,18 @@ export const RESEARCH_CAPABILITIES = [
 
 export type ResearchCapabilityId = (typeof RESEARCH_CAPABILITIES)[number];
 
+const RESEARCH_SCENARIO_CAPABILITIES = {
+  full: RESEARCH_CAPABILITIES,
+  quote: ['quote'],
+  earnings: ['quote', 'fundamentals'],
+  events: ['quote', 'news'],
+} as const satisfies Record<string, readonly ResearchCapabilityId[]>;
+
+export type ResearchScenario = keyof typeof RESEARCH_SCENARIO_CAPABILITIES;
+export const RESEARCH_SCENARIOS = Object.keys(
+  RESEARCH_SCENARIO_CAPABILITIES,
+) as ResearchScenario[];
+
 export type ResearchRunStatus =
   | 'planned'
   | 'queued'
@@ -49,6 +61,7 @@ export interface ResearchPlanStep {
 export interface ResearchPlan {
   version: 1;
   generatedAt: string;
+  scenario?: ResearchScenario;
   capabilities: ResearchPlanStep[];
   execution?: { maxConcurrency: number; budgetUnits: number };
 }
@@ -184,20 +197,26 @@ export function normalizeResearchSymbol(
 
 export function createResearchPlan(
   now = new Date().toISOString(),
+  scenario: ResearchScenario = 'full',
 ): ResearchPlan {
+  const capabilities = RESEARCH_SCENARIO_CAPABILITIES[scenario];
   return {
     version: 1,
     generatedAt: now,
-    capabilities: RESEARCH_CAPABILITIES.map((capability) => ({
+    scenario,
+    capabilities: capabilities.map((capability) => ({
       capability,
       label: CAPABILITY_LABELS[capability],
       provider: configuredProviderId(capability),
-      required: capability === 'quote',
+      required: scenario !== 'full' || capability === 'quote',
       timeoutMs: capability === 'quote' ? 15_000 : 10_000,
       maxAttempts: capability === 'quote' ? 2 : 1,
       parameters: {},
     })),
-    execution: { maxConcurrency: 2, budgetUnits: RESEARCH_CAPABILITIES.length },
+    execution: {
+      maxConcurrency: Math.min(2, capabilities.length),
+      budgetUnits: capabilities.length,
+    },
   };
 }
 
@@ -256,7 +275,7 @@ export function buildResearchReport(input: {
         ? []
         : ['已获得带取数时间的行情快照，可作为后续研究起点。'],
     bearArguments:
-      input.gaps.length > 0 ? ['财务、估值或新闻证据尚未完整接入。'] : [],
+      input.gaps.length > 0 ? ['部分所需数据未能取得，请查看数据缺口。'] : [],
     catalysts: [],
     risks: [
       '本报告仅供研究，不构成投资建议，也不执行交易。',

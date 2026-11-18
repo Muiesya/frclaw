@@ -35,6 +35,7 @@
 | `/api/admin`                       | `src/routes/admin.ts`            | 用户、邀请和审计              |
 | `/api/bug-report`                  | `src/routes/bug-report.ts`       | 脱敏问题报告                  |
 | `/api/research`                    | `src/routes/research.ts`         | Folio 研究运行、报告和证据    |
+| `/api/finance`                     | `src/routes/finance.ts`          | Longbridge 行情与连接配置     |
 | `/api/browse`                      | `src/routes/browse.ts`           | Host 目录选择                 |
 | `/api`                             | `src/routes/monitor.ts`          | 健康、状态和 Docker 构建      |
 | `/api/messages`、`/api/follow-ups` | `src/web.ts`                     | 消息发送和 Follow-up          |
@@ -44,13 +45,23 @@
 以下接口均要求登录，并按当前用户隔离研究运行：
 
 - `GET /api/research/runs`：列出研究运行。
-- `POST /api/research/runs`：提交 `{ symbol, market?, question }`，第一阶段仅接受港股（如 `0700.HK`），返回 `202` 并进入持久研究队列。可用 `Idempotency-Key` 请求头避免重复创建。
+- `POST /api/research/runs`：提交 `{ symbol, market?, question, scenario? }`，第一阶段仅接受港股（如 `0700.HK`），返回 `202` 并进入持久研究队列。可用 `Idempotency-Key` 请求头避免重复创建。
 - `GET /api/research/runs/:id`：读取计划、能力步骤、结构化报告和 EvidenceRef。
 - `POST /api/research/runs/:id/cancel`：取消尚未终态的运行。
 - `POST /api/research/runs/:id/review`：基于已有证券和问题创建一次新的只读复查，可供 Scheduler 或渠道适配器在完成权限校验后调用；支持 `Idempotency-Key`。
 - `POST /api/research/runs/:id/resume`：恢复失败、部分成功或进程中断的运行；已完成步骤会复用，其他步骤重试。租约过期或 Provider 结果未知时会显示 `uncertain`/`manual_reconciliation`，不会盲目重放。
 
-当前计划包含 `quote`、`fundamentals`、`valuation`、`news` 四类能力。仓库已接入
+`scenario` 取值及对应步骤：
+
+| 研究类型 | 计划步骤 |
+| --- | --- |
+| `full`（默认） | 行情、财务、估值、新闻 |
+| `quote` | 行情 |
+| `earnings` | 行情、财务 |
+| `events` | 行情、新闻 |
+
+服务端生成并保存计划。恢复沿用原计划，复查沿用原研究类型；旧记录复查时默认使用 `full`。
+仓库已接入
 Longbridge 只读行情作为 `quote` Provider；只有配置凭据并成功取数时才会生成 live EvidenceRef。
 未配置能力统一返回 `provider_unavailable`，不生成演示或虚构数据。详情响应同时返回
 Provider 健康状态、步骤 attempt/timeout 和证据新鲜度。独立能力使用计划中的有界并行执行，
