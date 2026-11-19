@@ -325,6 +325,13 @@ export async function runPiQueryAttempt(
       if (promptDone && promptError) {
         throw promptError;
       }
+      if (
+        promptDone &&
+        completionPublished &&
+        !options.tracker.hasPendingTurns
+      ) {
+        break;
+      }
       if (promptDone && !resultState.result) {
         if (!session.isStreaming) {
           throw new Error('Pi session ended without a final result');
@@ -338,10 +345,6 @@ export async function runPiQueryAttempt(
             'Pi session did not emit a final result after prompt completion',
           );
         }
-      }
-      if (promptDone && !options.tracker.hasPendingTurns) {
-        if (resultState.result) continue;
-        throw new Error('Pi session ended with uncompleted input turns');
       }
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
