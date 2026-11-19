@@ -42,6 +42,7 @@ describe('product terminology', () => {
     expect(workflow).toContain('个 Agent');
     expect(tools).toContain("case 'Agent':");
     expect(readme).toContain('Pi Agent Runtime');
-    expect(readme).toContain('智能体优先工作模型');
+    expect(readme).toContain('### Agent 与 Workspace');
+    expect(readme).toContain('Agent Profile');
   });
 });
